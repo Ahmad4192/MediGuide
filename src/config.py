@@ -1,16 +1,8 @@
-import os
-from dotenv import load_dotenv
-
-# .env file se API key load karna
-load_dotenv()
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
 # Model Configuration
 DEFAULT_MODEL = "gpt-4o-mini"
 DEFAULT_TEMPERATURE = 0.2
 
-# Form Options (Dropdowns aur Selections ke liye)
+# Form Options
 GENDER_OPTIONS = ["Male", "Female", "Other", "Prefer not to say"]
 
 COMMON_SYMPTOMS = [
@@ -44,7 +36,7 @@ LANGUAGE_OPTIONS = [
     "Arabic"
 ]
 
-# Medical Disclaimers
+# Medical Disclaimer
 DISCLAIMER_TEXT = (
     "IMPORTANT NOTICE: MediGuide AI is an educational AI prototype only. "
     "It is NOT a replacement for a licensed doctor, professional diagnosis, "

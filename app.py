@@ -2,7 +2,6 @@ import streamlit as st
 import time
 
 from src.config import (
-    OPENAI_API_KEY,
     GENDER_OPTIONS,
     COMMON_SYMPTOMS,
     DURATION_OPTIONS,
@@ -14,97 +13,11 @@ from src.cache_manager import configure_cache
 from src.chains import run_assessment_chain, stream_narrative, demo_direct_messages
 from src.utils import parse_llm_json
 
-# Page configuration
 st.set_page_config(
     page_title="MediGuide AI",
     page_icon="🩺",
     layout="wide"
 )
-
-# High-Specificity Custom CSS for Modern Streamlit
-st.markdown("""
-<style>
-    /* 1. Main Background and Container Width */
-    .stApp {
-        background-color: #0d1117 !important;
-    }
-    .main .block-container {
-        max-width: 1050px !important;
-        padding-top: 2rem !important;
-        padding-bottom: 4rem !important;
-    }
-
-    /* 2. Top Title Gradient Look */
-    h1 {
-        background: linear-gradient(90deg, #60a5fa, #38bdf8);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-weight: 800 !important;
-        font-size: 2.3rem !important;
-        margin-bottom: 0.5rem !important;
-    }
-
-    /* 3. Form Card Container with Glowing Border */
-    div[data-testid="stForm"] {
-        background: #161b22 !important;
-        border: 1px solid #30363d !important;
-        border-radius: 14px !important;
-        padding: 28px !important;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
-    }
-
-    /* 4. Inputs & Textareas Styling */
-    div[data-baseweb="input"] > div, 
-    div[data-baseweb="select"] > div,
-    textarea {
-        background-color: #0d1117 !important;
-        border: 1px solid #30363d !important;
-        border-radius: 8px !important;
-        color: #f0f6fc !important;
-    }
-    div[data-baseweb="input"] > div:focus-within,
-    textarea:focus {
-        border-color: #38bdf8 !important;
-        box-shadow: 0 0 0 1px #38bdf8 !important;
-    }
-
-    /* 5. Blue Gradient Submit Button */
-    div[data-testid="stFormSubmitButton"] button {
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
-        color: #ffffff !important;
-        font-size: 1.05rem !important;
-        font-weight: 600 !important;
-        border: none !important;
-        border-radius: 8px !important;
-        padding: 0.65rem 1.5rem !important;
-        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
-        transition: all 0.2s ease-in-out !important;
-    }
-    div[data-testid="stFormSubmitButton"] button:hover {
-        background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
-        transform: translateY(-2px) !important;
-        box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5) !important;
-    }
-
-    /* 6. Sidebar Polish */
-    section[data-testid="stSidebar"] {
-        background-color: #161b22 !important;
-        border-right: 1px solid #30363d !important;
-    }
-
-    /* 7. Metric Card Styling (Results) */
-    div[data-testid="stMetric"] {
-        background-color: #21262d !important;
-        border: 1px solid #30363d !important;
-        padding: 16px 20px !important;
-        border-radius: 10px !important;
-    }
-    div[data-testid="stMetricValue"] {
-        color: #58a6ff !important;
-        font-weight: 700 !important;
-    }
-</style>
-""", unsafe_allow_html=True)
 
 # ----------------- SIDEBAR -----------------
 with st.sidebar:
@@ -112,40 +25,57 @@ with st.sidebar:
     st.caption("AI-Powered Medical Symptom Assessment Assistant")
     
     st.divider()
-    st.subheader("⚙️ Configuration")
+    st.subheader("🔑 OpenAI API Key")
+    # Kono pre-filled key thakbe na, user nijer key enter korbe
+    user_api_key = st.text_input(
+        "Enter your OpenAI API Key",
+        type="password",
+        placeholder="sk-proj-...",
+        help="App use korar jonno obosshoi valid OpenAI API key lagbe."
+    )
     
-    # Model info display
+    if not user_api_key:
+        st.warning("⚠️ Proceed korte apnar API key enter korun.")
+    else:
+        st.success("API Key prottashito hoyeche!")
+
+    st.subheader("⚙️ Configuration")
     st.text_input("Active Model", value=DEFAULT_MODEL, disabled=True)
     
-    # Caching Selector
     cache_selection = st.radio(
         "LLM Cache Type",
-        options=["InMemoryCache", "SQLiteCache"],
-        help="InMemoryCache RAM me rehta hai; SQLiteCache disk file me persist hota hai."
+        options=["InMemoryCache", "SQLiteCache"]
     )
     cache_status_msg = configure_cache(cache_type=cache_selection)
     st.info(cache_status_msg)
     
-    # Language Selection
     selected_language = st.selectbox("Response Language", options=LANGUAGE_OPTIONS, index=0)
     
     st.divider()
-    # Medical Safety Disclaimer
     st.warning(f"⚠️ **MEDICAL DISCLAIMER**\n\n{DISCLAIMER_TEXT}")
+
+    st.divider()
+    with st.expander("🛠️ LangChain Direct Messages Demo"):
+        st.caption("Testing System / Human / AI Message classes")
+        if st.button("Run Message Demo"):
+            if not user_api_key.strip():
+                st.error("Prothome sidebar-e valid API key enter korun.")
+            else:
+                demo_res = demo_direct_messages(
+                    system_text="You are a medical chatbot explaining triage rules in 1 line.",
+                    human_text="What does high fever with stiff neck mean?",
+                    api_key=user_api_key.strip()
+                )
+                st.write("**System:**", demo_res["system"])
+                st.write("**Human:**", demo_res["human"])
+                st.write("**AI:**", demo_res["ai"])
 
 # ----------------- MAIN SCREEN -----------------
 st.title("Patient Symptom Assessment")
 st.write(
-    "Yeh application sirf educational purpose ke liye hai. Yeh koi confirmed medical diagnosis ya "
-    "professional medical treatment ka badal nahi hai."
+    "Ei application-ti shudhu shikkhamulok uddeshe toiri. Eta kono daktar ba medical diagnosis-er bikolpo noy."
 )
 
-# API Key Validation
-if not OPENAI_API_KEY:
-    st.error("OpenAI API key missing hai! Barah-e-karam apni .env file me OPENAI_API_KEY set karein.")
-    st.stop()
-
-# Input Form
 with st.form("patient_assessment_form"):
     st.subheader("📋 Patient Details & Symptoms")
     
@@ -169,16 +99,22 @@ with st.form("patient_assessment_form"):
 
 # ----------------- SUBMISSION HANDLING -----------------
 if submit_button:
+    # 1. API key check
+    if not user_api_key.strip():
+        st.error("❌ OpenAI API Key deoya hoyni! Barah-e-karam sidebar theke apnar nijer OpenAI API key enter korun.")
+        st.stop()
+
+    # 2. Symptoms check
     all_symptoms = list(selected_symptoms)
     if custom_symptoms.strip():
         all_symptoms.append(custom_symptoms.strip())
     
     if not all_symptoms:
-        st.error("⚠️ Barah-e-karam kam az kam ek symptom zaroor muntakhab ya enter karein.")
+        st.error("⚠️ Onugroho kore ontoto ek-ti symptom select ba likhe din.")
         st.stop()
         
     if not age_input.strip():
-        st.error("⚠️ Barah-e-karam patient ki age enter karein.")
+        st.error("⚠️ Onugroho kore patient-er age enter korun.")
         st.stop()
 
     payload = {
@@ -198,38 +134,37 @@ if submit_button:
     # Step 1: Live Narrative Streaming
     st.subheader("🗣️ Preliminary Guidance Narrative (Live Stream)")
     with st.chat_message("assistant"):
-        st.write_stream(stream_narrative(payload))
+        st.write_stream(stream_narrative(payload, api_key=user_api_key.strip()))
 
     st.divider()
 
     # Step 2: Structured Assessment Dashboard
     st.subheader("📊 Structured Assessment Dashboard")
     
-    with st.spinner("Structured assessment analyze ho rahi hai..."):
+    with st.spinner("Analyzing symptoms..."):
         start_time = time.time()
-        raw_output = run_assessment_chain(payload)
+        raw_output = run_assessment_chain(payload, api_key=user_api_key.strip())
         elapsed_time = round(time.time() - start_time, 2)
         
         parsed_data, parse_error = parse_llm_json(raw_output)
 
     if parse_error or not parsed_data:
-        st.error(f"Structured response parse karne me issue aaya: {parse_error}")
+        st.error(f"Response parsing-e shomossha hoyeche: {parse_error}")
         with st.expander("Raw Model Output"):
             st.code(raw_output)
     else:
-        st.caption(f"⚡ Response time: {elapsed_time}s (Dobara submit karne par cache speed check karein)")
+        st.caption(f"⚡ Response time: {elapsed_time}s")
         
         urgency = parsed_data.get("urgency_level", "LOW").upper()
 
         if urgency in ["HIGH", "EMERGENCY"]:
-            st.error(f"🚨 URGENCY LEVEL: {urgency} - Fauran doctor ya emergency service se rabta karein!")
+            st.error(f"🚨 URGENCY LEVEL: {urgency} - Druto daktar ba emergency service-e jogajog korun!")
         elif urgency == "MEDIUM":
-            st.warning(f"⚠️ URGENCY LEVEL: {urgency} - Healthcare professional se mashwara lene ki sifarish ki jati hai.")
+            st.warning(f"⚠️ URGENCY LEVEL: {urgency} - Healthcare professional-er poramorsho neoyar onurodh roilo.")
         else:
-            st.success(f"✅ URGENCY LEVEL: {urgency} - Gharelu dekhbhal aur aam nigrani kafi ho sakti hai.")
+            st.success(f"✅ URGENCY LEVEL: {urgency} - Sadharan ghoroa porichorja jotheshto hote pare.")
 
         st.metric(label="Calculated Urgency Level", value=urgency)
-
         st.info(f"**Patient Summary:** {parsed_data.get('summary', 'N/A')}")
 
         tab1, tab2, tab3 = st.tabs(["🩺 Possible Conditions", "📋 Next Steps & Questions", "⚠️ Red Flags / Warning Signs"])
@@ -242,7 +177,7 @@ if submit_button:
                     with st.expander(f"📌 {item.get('name', 'Condition')}"):
                         st.write(item.get("reason", "No details provided."))
             else:
-                st.write("Koi specific condition identify nahi hui.")
+                st.write("Kono specific condition paoya jayni.")
 
         with tab2:
             col_a, col_b = st.columns(2)
@@ -262,15 +197,3 @@ if submit_button:
             warnings = parsed_data.get("warning_signs", [])
             for w in warnings:
                 st.error(f"⚠️ {w}")
-
-# ----------------- SECTION 7: DEMO DIRECT MESSAGES -----------------
-with st.expander("🛠️ LangChain Direct Messages Demo (System / Human / AI Message)"):
-    st.write("Section 7 ke mutabiq direct message classes ki working testing:")
-    if st.button("Run Message Demo"):
-        demo_res = demo_direct_messages(
-            system_text="You are a medical chatbot explaining triage rules in 1 line.",
-            human_text="What does high fever with stiff neck mean?"
-        )
-        st.write("**System:**", demo_res["system"])
-        st.write("**Human:**", demo_res["human"])
-        st.write("**AI Message:**", demo_res["ai"])
